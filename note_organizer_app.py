@@ -30,27 +30,27 @@ class NoteOrganizerApp:
 
         # --- Mappings Management ---
         mappings_frame = tk.LabelFrame(root, text="Header to File Mappings")
-        mappings_frame.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="ewns")
+        mappings_frame.grid(row=1, column=0, columnspan=3, padx=10, pady=5, sticky="ewns")
 
-        tk.Label(mappings_frame, text="Header:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        tk.Label(mappings_frame, text="Header:").grid(row=0, column=0, padx=5, pady=2, sticky="w")
         self.header_entry_var = tk.StringVar()
         self.header_entry = tk.Entry(mappings_frame, textvariable=self.header_entry_var, width=30)
-        self.header_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        self.header_entry.grid(row=0, column=1, padx=5, pady=2, sticky="w")
+        
+        # Move Add/Update button next to header input
+        self.add_mapping_button = tk.Button(mappings_frame, text="Add/Update Mapping", command=self.add_or_update_mapping)
+        self.add_mapping_button.grid(row=0, column=2, padx=5, pady=2)
 
-        tk.Label(mappings_frame, text="Target File Path:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        tk.Label(mappings_frame, text="Target File Path:").grid(row=1, column=0, padx=5, pady=10, sticky="w")
         self.target_file_entry_var = tk.StringVar()
         self.target_file_entry = tk.Entry(mappings_frame, textvariable=self.target_file_entry_var, width=50)
-        self.target_file_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        self.target_file_entry.grid(row=1, column=1, padx=5, pady=2, sticky="ew")
         self.browse_target_button = tk.Button(mappings_frame, text="Browse...", command=self.browse_target_file)
-        self.browse_target_button.grid(row=1, column=2, padx=5, pady=5)
-
-
-        self.add_mapping_button = tk.Button(mappings_frame, text="Add/Update Mapping", command=self.add_or_update_mapping)
-        self.add_mapping_button.grid(row=2, column=0, columnspan=3, padx=5, pady=10)
+        self.browse_target_button.grid(row=1, column=2, padx=5, pady=2)
 
         # --- Mappings List ---
         self.mappings_list_frame = tk.Frame(mappings_frame, height=100)
-        self.mappings_list_frame.grid(row=3, column=0, columnspan=3, sticky="ewns", padx=5, pady=5)
+        self.mappings_list_frame.grid(row=2, column=0, columnspan=3, sticky="ewns", padx=5, pady=2)
         
         columns = ("Header", "Target File")
         self.mappings_tree = ttk.Treeview(self.mappings_list_frame, columns=columns, show="headings", selectmode="browse")
@@ -62,14 +62,14 @@ class NoteOrganizerApp:
         self.mappings_tree_scrollbar = ttk.Scrollbar(self.mappings_list_frame, orient="vertical", command=self.mappings_tree.yview)
         self.mappings_tree.configure(yscrollcommand=self.mappings_tree_scrollbar.set)
         
-        self.mappings_tree.pack(side="left", fill="both", expand=True, pady=20)
-        self.mappings_tree.configure(height=18)
+        self.mappings_tree.pack(side="left", fill="both", expand=True, pady=2)
+        self.mappings_tree.configure(height=28)
         self.mappings_tree_scrollbar.pack(side="right", fill="y")
 
-        # Style for Treeview to prevent text cutoff
+        # Style for Treeview to prevent text cutoff - balanced row height
         style = ttk.Style()
-        # Using a fixed row height, adjust if necessary
-        style.configure("Treeview", rowheight=50)
+        # Using a balanced row height - compact but readable
+        style.configure("Treeview", rowheight=35)
         # If further issues, consider styling "Treeview.Heading" and "Treeview.Item" explicitly
         # e.g., style.configure("Treeview.Heading", font=('Arial', 10, 'bold'), padding=(0,5,0,5))
         #      style.configure("Treeview.Item", padding=(0,2,0,2))
@@ -77,15 +77,15 @@ class NoteOrganizerApp:
         self.mappings_tree.bind("<<TreeviewSelect>>", self.on_mapping_select)
 
         self.remove_mapping_button = tk.Button(mappings_frame, text="Remove Selected Mapping", command=self.remove_mapping, state=tk.DISABLED)
-        self.remove_mapping_button.grid(row=4, column=0, columnspan=3, padx=5, pady=5)
+        self.remove_mapping_button.grid(row=3, column=0, columnspan=3, padx=5, pady=2)
         
         self.populate_mappings_list()
 
         # --- Actions ---
         actions_frame = tk.Frame(root)
-        actions_frame.grid(row=2, column=0, columnspan=3, pady=20)
+        actions_frame.grid(row=2, column=0, columnspan=3, pady=5)
         self.organize_button = tk.Button(actions_frame, text="Organize Notes", command=self.organize_notes, bg="lightblue", font=("Arial", 12))
-        self.organize_button.pack(pady=10)
+        self.organize_button.pack(pady=5)
 
         # Configure grid column weights
         root.grid_columnconfigure(1, weight=1)
