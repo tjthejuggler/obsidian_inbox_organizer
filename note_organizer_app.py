@@ -1,124 +1,305 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
-import tkinter.font
+import sys
 import json
 import os
 import re
 from datetime import datetime
 import collections
+from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu, QAction,
+                             QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+                             QLineEdit, QPushButton, QMessageBox, QFileDialog,
+                             QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox,
+                             QSizePolicy, QGridLayout) # Added QGridLayout
+from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import Qt
 
 CONFIG_FILE = "config.json"
 LOG_FILE = "organizer.log"
+TRAY_ICON_FILE = "tray_icon.png"
 
-class NoteOrganizerApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Obsidian Note Organizer")
-        self.root.geometry("1200x1500") # Increased height
+class SettingsDialog(QDialog):
+    def __init__(self, app_logic, parent=None):
+        super().__init__(parent)
+        self.app_logic = app_logic
+        self.setWindowTitle("Obsidian Note Organizer - Settings")
 
+        # Set dialog size based on screen height
+        screen_geometry = QApplication.primaryScreen().availableGeometry()
+        self.setFixedWidth(800) # Keep a fixed width or make it a percentage of screen width
+        self.setFixedHeight(screen_geometry.height() - 100) # Use most of the screen height, leaving some margin
+
+        self.init_ui()
+        self.load_settings_to_ui()
+
+    def init_ui(self):
+        main_layout = QVBoxLayout(self)
+
+        # --- Main Notes File ---
+        notes_file_group = QGroupBox("Main Notes File")
+        notes_file_layout = QHBoxLayout()
+        notes_file_layout.addWidget(QLabel("Main Notes File (.md):"))
+        self.notes_file_entry = QLineEdit(self.app_logic.last_notes_file)
+        notes_file_layout.addWidget(self.notes_file_entry)
+        browse_notes_button = QPushButton("Browse...")
+        browse_notes_button.clicked.connect(self.browse_notes_file)
+        notes_file_layout.addWidget(browse_notes_button)
+        notes_file_group.setLayout(notes_file_layout)
+        main_layout.addWidget(notes_file_group)
+
+        # --- Mappings Management ---
+        mappings_group = QGroupBox("Header to File Mappings")
+        mappings_layout = QVBoxLayout()
+
+        # Input fields for new/editing mappings
+        input_layout = QGridLayout()
+        input_layout.addWidget(QLabel("Header:"), 0, 0)
+        self.header_entry = QLineEdit()
+        input_layout.addWidget(self.header_entry, 0, 1)
+        
+        self.add_mapping_button = QPushButton("Add/Update Mapping")
+        self.add_mapping_button.clicked.connect(self.add_or_update_mapping)
+        input_layout.addWidget(self.add_mapping_button, 0, 2, 2, 1, Qt.AlignVCenter) # Span 2 rows
+
+        input_layout.addWidget(QLabel("Target File Path:"), 1, 0)
+        self.target_file_entry = QLineEdit()
+        input_layout.addWidget(self.target_file_entry, 1, 1)
+        
+        browse_target_button = QPushButton("Browse...")
+        browse_target_button.clicked.connect(self.browse_target_file)
+        # Add browse target button next to target_file_entry, ensure add_mapping_button is to its right
+        target_file_layout_h = QHBoxLayout()
+        target_file_layout_h.addWidget(self.target_file_entry)
+        target_file_layout_h.addWidget(browse_target_button)
+        input_layout.addLayout(target_file_layout_h, 1,1)
+
+
+        mappings_layout.addLayout(input_layout)
+
+        # Mappings Table
+        self.mappings_table = QTableWidget()
+        self.mappings_table.setColumnCount(2)
+        self.mappings_table.setHorizontalHeaderLabels(["Header", "Target File"])
+        self.mappings_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.mappings_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.mappings_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.mappings_table.setSelectionMode(QTableWidget.SingleSelection)
+        self.mappings_table.itemSelectionChanged.connect(self.on_mapping_select)
+        self.mappings_table.verticalHeader().setDefaultSectionSize(25) # Adjust row height for compactness
+        # Optionally, set a smaller font for table items if needed:
+        # font = self.mappings_table.font()
+        # font.setPointSize(9) # Example: set font size to 9
+        # self.mappings_table.setFont(font)
+        mappings_layout.addWidget(self.mappings_table)
+
+        self.remove_mapping_button = QPushButton("Remove Selected Mapping")
+        self.remove_mapping_button.setEnabled(False)
+        self.remove_mapping_button.clicked.connect(self.remove_mapping)
+        mappings_layout.addWidget(self.remove_mapping_button)
+        
+        mappings_group.setLayout(mappings_layout)
+        main_layout.addWidget(mappings_group)
+
+        # Dialog buttons (Save/Close)
+        dialog_button_layout = QHBoxLayout()
+        dialog_button_layout.addStretch()
+        # No explicit save button, save on close (accept)
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.accept) # Accept will trigger saving
+        dialog_button_layout.addWidget(close_button)
+        main_layout.addLayout(dialog_button_layout)
+
+    def load_settings_to_ui(self):
+        self.notes_file_entry.setText(self.app_logic.last_notes_file)
+        self.populate_mappings_list()
+
+    def browse_notes_file(self):
+        filepath, _ = QFileDialog.getOpenFileName(
+            self, "Select Main Notes File", "", "Markdown files (*.md);;All files (*.*)"
+        )
+        if filepath:
+            self.notes_file_entry.setText(filepath)
+            # self.app_logic.last_notes_file = filepath # Will be saved on dialog close
+
+    def browse_target_file(self):
+        filepath, _ = QFileDialog.getSaveFileName(
+            self, "Select or Create Target File", "", "Markdown files (*.md);;All files (*.*)"
+        )
+        if filepath:
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            self.target_file_entry.setText(filepath)
+
+    def populate_mappings_list(self):
+        self.mappings_table.setRowCount(0) # Clear table
+        for i, mapping in enumerate(self.app_logic.mappings):
+            self.mappings_table.insertRow(i)
+            self.mappings_table.setItem(i, 0, QTableWidgetItem(mapping["header"]))
+            self.mappings_table.setItem(i, 1, QTableWidgetItem(mapping["target_file"]))
+        self.mappings_table.clearSelection()
+        self.remove_mapping_button.setEnabled(False)
+
+
+    def add_or_update_mapping(self):
+        header = self.header_entry.text().strip()
+        target_file = self.target_file_entry.text().strip()
+
+        if not header:
+            QMessageBox.warning(self, "Input Error", "Header cannot be empty.")
+            return
+        if not target_file:
+            QMessageBox.warning(self, "Input Error", "Target file path cannot be empty.")
+            return
+
+        found_idx = -1
+        for i, m in enumerate(self.app_logic.mappings):
+            if m["header"] == header:
+                found_idx = i
+                break
+        
+        if found_idx != -1:
+            reply = QMessageBox.question(self, "Confirm Update",
+                                         f"Header '{header}' already exists. Update target file to '{target_file}'?",
+                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                self.app_logic.mappings[found_idx]["target_file"] = target_file
+            else:
+                return # User cancelled
+        else:
+            self.app_logic.mappings.append({"header": header, "target_file": target_file})
+
+        # self.app_logic.save_config() # Save will happen on dialog close
+        self.populate_mappings_list()
+        self.header_entry.clear()
+        self.target_file_entry.clear()
+        QMessageBox.information(self, "Success", "Mapping added/updated successfully.")
+
+
+    def on_mapping_select(self):
+        selected_rows = self.mappings_table.selectionModel().selectedRows()
+        if selected_rows:
+            row_index = selected_rows[0].row()
+            header = self.mappings_table.item(row_index, 0).text()
+            target_file = self.mappings_table.item(row_index, 1).text()
+            self.header_entry.setText(header)
+            self.target_file_entry.setText(target_file)
+            self.remove_mapping_button.setEnabled(True)
+        else:
+            self.header_entry.clear()
+            self.target_file_entry.clear()
+            self.remove_mapping_button.setEnabled(False)
+
+    def remove_mapping(self):
+        selected_rows = self.mappings_table.selectionModel().selectedRows()
+        if not selected_rows:
+            QMessageBox.warning(self, "Selection Error", "No mapping selected to remove.")
+            return
+
+        row_index = selected_rows[0].row()
+        header_to_remove = self.mappings_table.item(row_index, 0).text()
+
+        reply = QMessageBox.question(self, "Confirm Removal",
+                                     f"Are you sure you want to remove the mapping for header '{header_to_remove}'?",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.app_logic.mappings = [m for m in self.app_logic.mappings if m["header"] != header_to_remove]
+            # self.app_logic.save_config() # Save on dialog close
+            self.populate_mappings_list()
+            self.header_entry.clear()
+            self.target_file_entry.clear()
+            self.remove_mapping_button.setEnabled(False)
+            QMessageBox.showinfo(self, "Success", "Mapping removed.")
+
+    def accept(self): # Called when "Close" is clicked or dialog is closed
+        self.app_logic.last_notes_file = self.notes_file_entry.text()
+        self.app_logic.save_config()
+        super().accept()
+
+    def reject(self): # Called on Escape or if a Cancel button existed
+        # Config is not saved if dialog is rejected
+        super().reject()
+
+
+class NoteOrganizerAppLogic:
+    def __init__(self):
+        self.q_app = QApplication.instance() # Get existing instance or None
+        if not self.q_app:
+             self.q_app = QApplication(sys.argv)
+        self.q_app.setQuitOnLastWindowClosed(False) # Important for tray icon
+
+        self.settings_dialog_instance = None
+        self.tray_icon = None
+        
         config_data = self.load_config()
         self.mappings = config_data.get("mappings", [])
         self.last_notes_file = config_data.get("last_notes_file", "")
+        # No notes_file_path_var directly, UI will handle its own display
 
-        # --- Main Notes File ---
-        tk.Label(root, text="Main Notes File (.md):").grid(row=0, column=0, padx=5, pady=5, sticky="w")
-        self.notes_file_path_var = tk.StringVar(value=self.last_notes_file)
-        self.notes_file_entry = tk.Entry(root, textvariable=self.notes_file_path_var, width=60)
-        self.notes_file_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
-        self.browse_button = tk.Button(root, text="Browse...", command=self.browse_notes_file)
-        self.browse_button.grid(row=0, column=2, padx=5, pady=5)
+    def show_settings_window(self):
+        if self.settings_dialog_instance is None or not self.settings_dialog_instance.isVisible():
+            self.settings_dialog_instance = SettingsDialog(self)
+            self.settings_dialog_instance.show()
+            self.settings_dialog_instance.activateWindow() # Bring to front
+            self.settings_dialog_instance.raise_()
+        else:
+            self.settings_dialog_instance.activateWindow()
+            self.settings_dialog_instance.raise_()
 
-        # --- Mappings Management ---
-        mappings_frame = tk.LabelFrame(root, text="Header to File Mappings")
-        mappings_frame.grid(row=1, column=0, columnspan=3, padx=10, pady=5, sticky="ewns")
 
-        tk.Label(mappings_frame, text="Header:").grid(row=0, column=0, padx=5, pady=2, sticky="w")
-        self.header_entry_var = tk.StringVar()
-        self.header_entry = tk.Entry(mappings_frame, textvariable=self.header_entry_var, width=30)
-        self.header_entry.grid(row=0, column=1, padx=5, pady=2, sticky="w")
+    def run_organization_from_tray(self):
+        self.log_action("TRAY_CLICK", "Organize triggered from tray", "N/A", "N/A")
+        # Ensure config is current before organizing (already loaded in __init__, settings dialog saves on close)
+        self.organize_notes()
+
+    def on_quit(self):
+        self.log_action("APP_QUIT", "Application quitting. Attempting to save config...", "System", "System")
+        # If settings window is open and visible, grab the latest notes file path from it
+        if self.settings_dialog_instance and self.settings_dialog_instance.isVisible():
+            current_notes_file_in_dialog = self.settings_dialog_instance.notes_file_entry.text()
+            if current_notes_file_in_dialog: # Only update if there's something in the field
+                 self.last_notes_file = current_notes_file_in_dialog
         
-        # Move Add/Update button next to header input
-        self.add_mapping_button = tk.Button(mappings_frame, text="Add/Update Mapping", command=self.add_or_update_mapping)
-        self.add_mapping_button.grid(row=0, column=2, padx=5, pady=2)
+        self.save_config() # Save configuration before quitting
+        self.q_app.quit()
 
-        tk.Label(mappings_frame, text="Target File Path:").grid(row=1, column=0, padx=5, pady=10, sticky="w")
-        self.target_file_entry_var = tk.StringVar()
-        self.target_file_entry = tk.Entry(mappings_frame, textvariable=self.target_file_entry_var, width=50)
-        self.target_file_entry.grid(row=1, column=1, padx=5, pady=2, sticky="ew")
-        self.browse_target_button = tk.Button(mappings_frame, text="Browse...", command=self.browse_target_file)
-        self.browse_target_button.grid(row=1, column=2, padx=5, pady=2)
+    def start_tray_app(self):
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            QMessageBox.critical(None, "Systray", "I couldn't detect any system tray on this system.")
+            self.log_action("ERROR", "System tray not available.", "System", "System")
+            sys.exit(1)
 
-        # --- Mappings List ---
-        self.mappings_list_frame = tk.Frame(mappings_frame, height=100)
-        self.mappings_list_frame.grid(row=2, column=0, columnspan=3, sticky="ewns", padx=5, pady=2)
+        icon_path = TRAY_ICON_FILE
+        if not os.path.exists(icon_path):
+            QMessageBox.critical(None, "Tray Icon Error", f"Icon file '{icon_path}' not found. Exiting.")
+            self.log_action("ERROR", f"Icon file {icon_path} not found.", "System", "System")
+            sys.exit(1)
         
-        columns = ("Header", "Target File")
-        self.mappings_tree = ttk.Treeview(self.mappings_list_frame, columns=columns, show="headings", selectmode="browse")
-        self.mappings_tree.heading("Header", text="Header")
-        self.mappings_tree.heading("Target File", text="Target File")
-        self.mappings_tree.column("Header", width=250)
-        self.mappings_tree.column("Target File", width=400)
+        self.tray_icon = QSystemTrayIcon(QIcon(icon_path), self.q_app)
+        self.tray_icon.setToolTip("Obsidian Note Organizer")
+
+        menu = QMenu()
         
-        self.mappings_tree_scrollbar = ttk.Scrollbar(self.mappings_list_frame, orient="vertical", command=self.mappings_tree.yview)
-        self.mappings_tree.configure(yscrollcommand=self.mappings_tree_scrollbar.set)
+        organize_action = QAction("Organize Notes", self.q_app)
+        organize_action.triggered.connect(self.run_organization_from_tray)
+        menu.addAction(organize_action)
         
-        self.mappings_tree.pack(side="left", fill="both", expand=True, pady=2)
-        self.mappings_tree.configure(height=28)
-        self.mappings_tree_scrollbar.pack(side="right", fill="y")
-
-        # Style for Treeview to prevent text cutoff - balanced row height
-        style = ttk.Style()
-        # Using a balanced row height - compact but readable
-        style.configure("Treeview", rowheight=35)
-        # If further issues, consider styling "Treeview.Heading" and "Treeview.Item" explicitly
-        # e.g., style.configure("Treeview.Heading", font=('Arial', 10, 'bold'), padding=(0,5,0,5))
-        #      style.configure("Treeview.Item", padding=(0,2,0,2))
-
-        self.mappings_tree.bind("<<TreeviewSelect>>", self.on_mapping_select)
-
-        self.remove_mapping_button = tk.Button(mappings_frame, text="Remove Selected Mapping", command=self.remove_mapping, state=tk.DISABLED)
-        self.remove_mapping_button.grid(row=3, column=0, columnspan=3, padx=5, pady=2)
+        settings_action = QAction("Settings", self.q_app)
+        settings_action.triggered.connect(self.show_settings_window)
+        menu.addAction(settings_action)
         
-        self.populate_mappings_list()
+        menu.addSeparator()
+        
+        quit_action = QAction("Quit", self.q_app)
+        quit_action.triggered.connect(self.on_quit)
+        menu.addAction(quit_action)
+        
+        self.tray_icon.setContextMenu(menu)
+        self.tray_icon.activated.connect(self.on_tray_activated)
+        self.tray_icon.show()
 
-        # --- Actions ---
-        actions_frame = tk.Frame(root)
-        actions_frame.grid(row=2, column=0, columnspan=3, pady=5)
-        self.organize_button = tk.Button(actions_frame, text="Organize Notes", command=self.organize_notes, bg="lightblue", font=("Arial", 12))
-        self.organize_button.pack(pady=5)
+        self.log_action("APP_START", "Application started in tray mode.", "System", "System")
+        sys.exit(self.q_app.exec_())
 
-        # Configure grid column weights
-        root.grid_columnconfigure(1, weight=1)
-        mappings_frame.grid_columnconfigure(1, weight=1)
-
-        # Handle app close
-        self.root.protocol("WM_DELETE_WINDOW", self.on_app_close)
-
-
-    def on_app_close(self):
-        self.save_config()
-        self.root.destroy()
-
-    def browse_notes_file(self):
-        filepath = filedialog.askopenfilename(
-            defaultextension=".md",
-            filetypes=[("Markdown files", "*.md"), ("All files", "*.*")]
-        )
-        if filepath:
-            self.notes_file_path_var.set(filepath)
-            self.last_notes_file = filepath
-            self.save_config()
-
-    def browse_target_file(self):
-        filepath = filedialog.asksaveasfilename(
-            defaultextension=".md",
-            filetypes=[("Markdown files", "*.md"), ("All files", "*.*")],
-            title="Select or Create Target File"
-        )
-        if filepath:
-            # Ensure the directory exists
-            os.makedirs(os.path.dirname(filepath), exist_ok=True)
-            self.target_file_entry_var.set(filepath)
+    def on_tray_activated(self, reason):
+        if reason == QSystemTrayIcon.Trigger: # Left click
+            self.run_organization_from_tray()
 
     def load_config(self):
         default_config = {"mappings": [], "last_notes_file": ""}
@@ -126,9 +307,8 @@ class NoteOrganizerApp:
             try:
                 with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                     config_data = json.load(f)
-                    # Ensure basic structure for robustness
                     if not isinstance(config_data, dict):
-                        messagebox.showerror("Config Error", f"{CONFIG_FILE} has an invalid format. Resetting.")
+                        self._show_config_error_message(f"{CONFIG_FILE} has an invalid format. Resetting.")
                         return default_config
                     if "mappings" not in config_data or not isinstance(config_data["mappings"], list):
                         config_data["mappings"] = []
@@ -136,100 +316,30 @@ class NoteOrganizerApp:
                         config_data["last_notes_file"] = ""
                     return config_data
             except json.JSONDecodeError:
-                messagebox.showerror("Config Error", f"Could not decode {CONFIG_FILE}. Using default configuration.")
+                self._show_config_error_message(f"Could not decode {CONFIG_FILE}. Using default configuration.")
                 return default_config
             except Exception as e:
-                messagebox.showerror("Config Error", f"Could not load {CONFIG_FILE}: {e}. Using default configuration.")
+                self._show_config_error_message(f"Could not load {CONFIG_FILE}: {e}. Using default configuration.")
                 return default_config
         return default_config
 
+    def _show_config_error_message(self, message):
+        # This might be called before QApplication is fully set up for dialogs if config load fails early
+        print(f"CONFIG ERROR: {message}") # Fallback to console
+        if QApplication.instance(): # Check if app instance exists for QMessageBox
+             QMessageBox.critical(None, "Config Error", message)
+
+
     def save_config(self):
-        # Ensure self.last_notes_file is updated from the StringVar before saving
-        current_notes_file = self.notes_file_path_var.get()
-        if current_notes_file: # Only update if there's something in the field
-            self.last_notes_file = current_notes_file
-            
         config_data = {
             "mappings": self.mappings,
-            "last_notes_file": self.last_notes_file
+            "last_notes_file": self.last_notes_file # Updated by SettingsDialog on accept
         }
         try:
             with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(config_data, f, indent=2)
         except Exception as e:
-            messagebox.showerror("Config Error", f"Could not save configuration to {CONFIG_FILE}: {e}")
-
-    def populate_mappings_list(self):
-        for item in self.mappings_tree.get_children():
-            self.mappings_tree.delete(item)
-        for i, mapping in enumerate(self.mappings):
-            self.mappings_tree.insert("", "end", iid=str(i), values=(mapping["header"], mapping["target_file"]))
-
-    def add_or_update_mapping(self):
-        header = self.header_entry_var.get().strip()
-        target_file = self.target_file_entry_var.get().strip()
-
-        if not header:
-            messagebox.showwarning("Input Error", "Header cannot be empty.")
-            return
-        if not target_file:
-            messagebox.showwarning("Input Error", "Target file path cannot be empty.")
-            return
-
-        # Check if header already exists, if so, update
-        found = False
-        for mapping in self.mappings:
-            if mapping["header"] == header:
-                if messagebox.askyesno("Confirm Update", f"Header '{header}' already exists. Update target file to '{target_file}'?"):
-                    mapping["target_file"] = target_file
-                    found = True
-                else:
-                    return # User cancelled update
-                break
-        
-        if not found:
-            self.mappings.append({"header": header, "target_file": target_file})
-
-        self.save_config()
-        self.populate_mappings_list()
-        self.header_entry_var.set("")
-        self.target_file_entry_var.set("")
-        messagebox.showinfo("Success", "Mapping added/updated successfully.")
-
-    def on_mapping_select(self, event):
-        selected_items = self.mappings_tree.selection()
-        if selected_items:
-            selected_iid = selected_items[0]
-            item = self.mappings_tree.item(selected_iid)
-            values = item['values']
-            if values:
-                self.header_entry_var.set(values[0])
-                self.target_file_entry_var.set(values[1])
-                self.remove_mapping_button.config(state=tk.NORMAL)
-        else:
-            self.header_entry_var.set("")
-            self.target_file_entry_var.set("")
-            self.remove_mapping_button.config(state=tk.DISABLED)
-
-
-    def remove_mapping(self):
-        selected_items = self.mappings_tree.selection()
-        if not selected_items:
-            messagebox.showwarning("Selection Error", "No mapping selected to remove.")
-            return
-
-        selected_iid = selected_items[0]
-        item = self.mappings_tree.item(selected_iid)
-        header_to_remove = item['values'][0]
-
-        if messagebox.askyesno("Confirm Removal", f"Are you sure you want to remove the mapping for header '{header_to_remove}'?"):
-            self.mappings = [m for m in self.mappings if m["header"] != header_to_remove]
-            self.save_config()
-            self.populate_mappings_list()
-            self.header_entry_var.set("")
-            self.target_file_entry_var.set("")
-            self.remove_mapping_button.config(state=tk.DISABLED)
-            messagebox.showinfo("Success", "Mapping removed.")
+            QMessageBox.critical(None, "Config Save Error", f"Could not save configuration to {CONFIG_FILE}: {e}")
     
     def log_action(self, header, note_snippet, source_file, target_file):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -238,26 +348,34 @@ class NoteOrganizerApp:
             with open(LOG_FILE, "a", encoding="utf-8") as f:
                 f.write(log_entry)
         except Exception as e:
-            messagebox.showerror("Logging Error", f"Failed to write to log file {LOG_FILE}: {e}")
+            # Avoid showing QMessageBox here as it could be frequent or from background tasks
+            print(f"Logging Error: Failed to write to log file {LOG_FILE}: {e}")
+
 
     def organize_notes(self):
-        # Save current config (especially the notes file path) before organizing
-        self.save_config()
+        # self.save_config() # Config is saved by settings dialog on close, or loaded fresh
         
-        main_notes_file = self.notes_file_path_var.get()
-        if not main_notes_file or not os.path.exists(main_notes_file):
-            messagebox.showerror("File Error", "Main notes file path is invalid or file does not exist.")
+        # Ensure latest config is used if settings window wasn't opened / saved yet
+        # Or, if called when settings window is not open, current state of self.mappings/last_notes_file is used.
+        # This is fine as __init__ loads it, and settings dialog updates it then saves.
+        current_main_notes_file = self.last_notes_file
+
+        if not current_main_notes_file or not os.path.exists(current_main_notes_file):
+            QMessageBox.critical(None, "File Error", "Main notes file path is invalid or file does not exist.")
             return
 
         if not self.mappings:
-            messagebox.showinfo("No Mappings", "No header-to-file mappings defined. Nothing to organize.")
+            if self.tray_icon:
+                self.tray_icon.showMessage("Note Organizer", "No header-to-file mappings defined. Nothing to organize.", QSystemTrayIcon.Information, 3000)
+            else: # Fallback if tray icon isn't initialized for some reason
+                QMessageBox.information(None, "No Mappings", "No header-to-file mappings defined. Nothing to organize.")
             return
-
+        
         try:
-            with open(main_notes_file, "r", encoding="utf-8") as f:
-                all_lines_from_file = f.readlines() # Read all lines with their original endings
+            with open(current_main_notes_file, "r", encoding="utf-8") as f:
+                all_lines_from_file = f.readlines()
         except Exception as e:
-            messagebox.showerror("File Read Error", f"Could not read main notes file: {e}")
+            QMessageBox.critical(None, "File Read Error", f"Could not read main notes file: {e}")
             return
 
         remaining_lines_for_main_file = []
@@ -269,19 +387,17 @@ class NoteOrganizerApp:
 
         idx = 0
         while idx < len(all_lines_from_file):
-            current_line_text = all_lines_from_file[idx].rstrip('\r\n') # Strip newlines for matching
-            
+            current_line_text = all_lines_from_file[idx].rstrip('\r\n')
             is_date_line = date_pattern.match(current_line_text)
             actual_header_str = ""
-            num_header_lines_for_current_segment = 0 # Lines that form the header itself (1 or 2)
-            
-            first_line_of_segment = all_lines_from_file[idx] # Keep original line ending
+            num_header_lines_for_current_segment = 0
+            first_line_of_segment = all_lines_from_file[idx]
 
             if is_date_line:
                 if idx + 1 < len(all_lines_from_file):
                     actual_header_str = all_lines_from_file[idx+1].strip()
                     num_header_lines_for_current_segment = 2
-                else: # Date line at EOF, not a valid header for us
+                else:
                     remaining_lines_for_main_file.append(first_line_of_segment)
                     idx += 1
                     continue
@@ -292,25 +408,17 @@ class NoteOrganizerApp:
             if actual_header_str.lower() in configured_headers_map:
                 target_file = configured_headers_map[actual_header_str.lower()]
                 current_note_lines_accumulator = []
-
-                # Add header lines to accumulator
-                current_note_lines_accumulator.append(first_line_of_segment) # date or header line
+                current_note_lines_accumulator.append(first_line_of_segment)
                 if is_date_line:
-                    current_note_lines_accumulator.append(all_lines_from_file[idx+1]) # actual header line
+                    current_note_lines_accumulator.append(all_lines_from_file[idx+1])
 
-                # Start accumulating content lines for this specific note
                 content_scan_idx = idx + num_header_lines_for_current_segment
-                
                 while content_scan_idx < len(all_lines_from_file):
                     line_being_scanned = all_lines_from_file[content_scan_idx]
                     line_being_scanned_stripped = line_being_scanned.strip()
-
-                    if not line_being_scanned_stripped: # Empty line, this note ends
-                        idx = content_scan_idx + 1 # Next outer loop iteration starts after this empty line
+                    if not line_being_scanned_stripped:
+                        idx = content_scan_idx + 1
                         break
-                    
-                    # Check if this line_being_scanned starts a *new* mapped note
-                    # This check determines the end of the current note if a new one starts immediately
                     scan_is_date = date_pattern.match(line_being_scanned_stripped)
                     scan_actual_header = ""
                     if scan_is_date:
@@ -318,111 +426,114 @@ class NoteOrganizerApp:
                             scan_actual_header = all_lines_from_file[content_scan_idx+1].strip()
                     else:
                         scan_actual_header = line_being_scanned_stripped
-                    
-                    if scan_actual_header in configured_headers_map: # New mapped note starts
-                        idx = content_scan_idx # Next outer loop will process this new header
+                    if scan_actual_header.lower() in configured_headers_map: # Use .lower() here too
+                        idx = content_scan_idx
                         break
-                    else: # Regular content line for the current note
+                    else:
                         current_note_lines_accumulator.append(line_being_scanned)
                         content_scan_idx += 1
-                        if content_scan_idx == len(all_lines_from_file): # Reached EOF
+                        if content_scan_idx == len(all_lines_from_file):
                             idx = content_scan_idx
                             break
-                else: # Inner loop finished without break (scanned till EOF or next header was not mapped)
+                else:
                     idx = content_scan_idx
-
-                # Extract content, excluding original header lines
+                
                 note_content_lines = current_note_lines_accumulator[num_header_lines_for_current_segment:]
-                actual_note_content_for_file = "".join(note_content_lines).strip() # Join and strip leading/trailing whitespace from content block
-                
-                # Create new timestamp header
+                actual_note_content_for_file = "".join(note_content_lines).strip()
                 new_timestamp_header = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " (auto)"
-                
-                # Prepare the block to be written to the target file
                 formatted_note_for_target = new_timestamp_header
-                if actual_note_content_for_file: # Add content only if it's not empty
+                if actual_note_content_for_file:
                     formatted_note_for_target += os.linesep + actual_note_content_for_file
-                
                 notes_to_move_by_target[target_file].append(formatted_note_for_target)
-                
-                # Log with original header and a snippet of the *content* part for clarity
                 log_snippet_content = "".join(note_content_lines)
-                self.log_action(actual_header_str, log_snippet_content, main_notes_file, target_file)
+                self.log_action(actual_header_str, log_snippet_content, current_main_notes_file, target_file)
                 notes_moved_count += 1
-            else: # Line does not start a mapped note
+            else:
                 remaining_lines_for_main_file.append(first_line_of_segment)
                 idx += 1
         
-        # --- Update Main Notes File ---
-        updated_main_content = "".join(remaining_lines_for_main_file) # Join lines keeping original endings
-
+        updated_main_content = "".join(remaining_lines_for_main_file)
         try:
-            backup_file_path = main_notes_file + ".bak"
+            backup_file_path = current_main_notes_file + ".bak"
             if os.path.exists(backup_file_path):
                  os.remove(backup_file_path)
-            if os.path.exists(main_notes_file): # Only rename if it exists
-                os.rename(main_notes_file, backup_file_path)
-            
-            with open(main_notes_file, "w", encoding="utf-8") as f:
+            if os.path.exists(current_main_notes_file):
+                os.rename(current_main_notes_file, backup_file_path)
+            with open(current_main_notes_file, "w", encoding="utf-8") as f:
                 f.write(updated_main_content)
         except Exception as e:
-            messagebox.showerror("File Update Error", f"Could not update main notes file: {e}")
-            # Attempt to restore from backup if rename succeeded but write failed
-            if os.path.exists(backup_file_path) and not os.path.exists(main_notes_file):
+            QMessageBox.critical(None, "File Update Error", f"Could not update main notes file: {e}")
+            if os.path.exists(backup_file_path) and not os.path.exists(current_main_notes_file):
                 try:
-                    os.rename(backup_file_path, main_notes_file)
-                    messagebox.showinfo("Restore", "Attempted to restore original file from backup.")
-                except Exception as restore_error: # Renamed 're' to 'restore_error'
-                    messagebox.showerror("Restore Error", f"Could not restore original file: {restore_error}")
-            return # Stop processing if main file update fails
+                    os.rename(backup_file_path, current_main_notes_file)
+                    if self.tray_icon:
+                        self.tray_icon.showMessage("Note Organizer", "Attempted to restore original file from backup.", QSystemTrayIcon.Information, 3000)
+                    else:
+                        QMessageBox.information(None, "Restore", "Attempted to restore original file from backup.")
+                except Exception as restore_error:
+                    QMessageBox.critical(None, "Restore Error", f"Could not restore original file: {restore_error}")
+            return
 
-        # --- Write Moved Notes to Target Files (Prepending) ---
         for target_file, notes_list in notes_to_move_by_target.items():
             if not notes_list:
                 continue
-
-            # Ensure target directory exists
             target_dir = os.path.dirname(target_file)
-            if target_dir and not os.path.exists(target_dir): # Check if target_dir is not empty (for files in root)
+            if target_dir and not os.path.exists(target_dir):
                 os.makedirs(target_dir, exist_ok=True)
-
             existing_content = ""
             if os.path.exists(target_file):
                 try:
                     with open(target_file, "r", encoding="utf-8") as tf_read:
                         existing_content = tf_read.read()
                 except Exception as e:
-                    messagebox.showerror("Target Read Error", f"Could not read existing target file {target_file}: {e}")
-                    continue # Skip this target if cannot read
-
-            # Join new notes with double newlines
+                    err_msg = f"Could not read existing target file {target_file}: {e}"
+                    if self.tray_icon:
+                        self.tray_icon.showMessage("Target Read Error", err_msg, QSystemTrayIcon.Warning, 5000)
+                    else:
+                        QMessageBox.warning(None, "Target Read Error", err_msg)
+                    self.log_action("ERROR_TARGET_READ", err_msg, current_main_notes_file, target_file)
+                    continue
             new_notes_block = (os.linesep + os.linesep).join(notes_list)
-
             final_content = new_notes_block
-            if existing_content.strip(): # Add existing content only if it's not just whitespace
+            if existing_content.strip():
                 final_content += os.linesep + os.linesep + existing_content.strip()
-            else: # If existing content is empty or whitespace, just use new notes (strip to avoid leading newlines)
+            else:
                  final_content = new_notes_block.strip()
-
-
             try:
                 with open(target_file, "w", encoding="utf-8") as tf_write:
-                    tf_write.write(final_content + os.linesep) # Add a trailing newline
+                    tf_write.write(final_content + os.linesep)
             except Exception as e:
-                messagebox.showerror("Target Write Error", f"Could not write to target file {target_file}: {e}")
+                err_msg = f"Could not write to target file {target_file}: {e}"
+                if self.tray_icon:
+                    self.tray_icon.showMessage("Target Write Error", err_msg, QSystemTrayIcon.Warning, 5000)
+                else:
+                    QMessageBox.warning(None, "Target Write Error", err_msg)
+                self.log_action("ERROR_TARGET_WRITE", err_msg, current_main_notes_file, target_file)
 
         if notes_moved_count > 0:
-            messagebox.showinfo("Organization Complete",
-                                f"{notes_moved_count} note(s) moved.\n"
-                                f"Original file backed up to: {main_notes_file + '.bak'}\n"
-                                f"Please check {LOG_FILE} for details.")
+            msg = (f"{notes_moved_count} note(s) moved.\n"
+                   f"Original file backed up to: {current_main_notes_file + '.bak'}\n"
+                   f"Please check {LOG_FILE} for details.")
+            if self.tray_icon:
+                self.tray_icon.showMessage("Organization Complete", msg, QSystemTrayIcon.Information, 5000)
+            else:
+                QMessageBox.information(None, "Organization Complete", msg)
         else:
-            messagebox.showinfo("Organization Complete", "No notes matched the defined mappings for moving.")
+            msg = "No notes matched the defined mappings for moving."
+            if self.tray_icon:
+                self.tray_icon.showMessage("Organization Complete", msg, QSystemTrayIcon.Information, 3000)
+            else:
+                QMessageBox.information(None, "Organization Complete", msg)
+
 
 def main():
-    root = tk.Tk()
-    app = NoteOrganizerApp(root)
-    root.mainloop()
+    # QApplication instance is managed by NoteOrganizerAppLogic
+    app_logic = NoteOrganizerAppLogic()
+    app_logic.start_tray_app()
+
 
 if __name__ == "__main__":
+    # It's good practice to ensure QT_QPA_PLATFORM is set if issues arise,
+    # but often not needed. The example mouse_modes app uses it.
+    os.environ["QT_QPA_PLATFORM"] = "xcb" # Ensure this is set before QApplication is created
     main()

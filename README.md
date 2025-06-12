@@ -4,10 +4,15 @@ This Python application helps organize notes from a main Markdown (`.md`) file i
 
 ## Features
 
--   Define header-to-file mappings: Specify which notes (identified by their headers) should be moved to which target files.
+-   **Tray Icon Operation**: The application now runs as a tray icon for easy access.
+    -   **Left-click** the tray icon to organize notes based on current settings.
+    -   **Right-click** the tray icon to access:
+        -   **Settings**: Opens a window to manage header-to-file mappings and the main notes file.
+        -   **Quit**: Exits the application.
+-   Define header-to-file mappings: Specify which notes (identified by their headers) should be moved to which target files (managed via the Settings window).
 -   Automatic Note Processing: Scans a main notes file, identifies notes by their headers, removes their original headers, prepends a new timestamp (`YYYY-MM-DD HH:MM:SS (auto)`), and moves them to their designated files.
 -   Logging: Keeps a detailed log of all note movements, including timestamp, the *original* header, and a snippet of the note content.
--   GUI: A simple graphical user interface to manage mappings and trigger the organization process.
+-   GUI for Settings: A simple graphical user interface (accessed from the tray icon) to manage mappings.
 
 ## How Notes are Identified
 
@@ -54,19 +59,30 @@ Example `organizer.log` entry:
 ## Prerequisites
 
 -   Python 3.x
--   Tkinter (usually included with Python standard library)
+-   `PyQt5`: For the graphical user interface and system tray icon functionality. Install via pip: `pip install PyQt5`
 
 ## How to Run
 
-1.  Ensure Python 3 is installed.
-2.  Run the application:
+1.  Ensure Python 3 and the `PyQt5` library are installed.
     ```bash
-    python note_organizer_app.py
+    pip install PyQt5
     ```
-3.  In the GUI:
-    -   Specify the path to your main notes `.md` file.
-    -   Add header-file mappings.
-    -   Click "Organize Notes" to process your notes.
+2.  Make sure `tray_icon.png` is in the same directory as the application.
+3.  Run the application using the provided shell script or directly:
+    ```bash
+    ./run_note_organizer.sh
+    ```
+    or
+    ```bash
+    python3 note_organizer_app.py
+    ```
+4.  The application will start as an icon in your system tray.
+    -   **Left-click** the tray icon to perform note organization using the currently saved settings.
+    -   **Right-click** the tray icon and select "Settings" to:
+        -   Specify the path to your main notes `.md` file.
+        -   Add or manage header-file mappings.
+        -   Close the settings window to save changes.
+    -   **Right-click** and select "Quit" to close the application.
 
 ## Important Note on Data Safety
 
@@ -75,4 +91,4 @@ This application MODIFIES your main notes file by moving notes out of it. It is 
 2.  Test the application with a copy of your notes file first to ensure it behaves as expected.
 
 ---
-*README.md last updated: 2025-06-12 10:59:47 (Self-generated timestamp)*
+*README.md last updated: 2025-06-12 15:48:00 (Self-generated timestamp)*

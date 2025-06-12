@@ -1,19 +1,55 @@
 {
   "mappings": [
     {
-      "header": "ToRead",
-      "target_file": "/home/twain/noteVault/ToRemember/ToRead.md"
+      "header": "AiArt",
+      "target_file": "/home/twain/noteVault/AI/AI Art/Prompts/Not Yet Used.md"
     },
     {
-      "header": "JugglingPattern",
-      "target_file": "/home/twain/noteVault/Juggling/Patterns.md"
+      "header": "AiTutor",
+      "target_file": "/home/twain/noteVault/AiTutor.md"
+    },
+    {
+      "header": "AppIdea",
+      "target_file": "/home/twain/noteVault/Z Dev/Apps.md"
+    },
+    {
+      "header": "Asia25",
+      "target_file": "/home/twain/noteVault/Asia25.md"
+    },
+    {
+      "header": "Habits",
+      "target_file": "/home/twain/noteVault/Habits Thoughts AND Anki Thought.md"
+    },
+    {
+      "header": "JugCoach",
+      "target_file": "/home/twain/noteVault/Z Dev/Current Projects/JugCoach.md"
     },
     {
       "header": "JugglingMusic",
       "target_file": "/home/twain/noteVault/JugglingMusic.md"
     },
     {
-      "header": "MovieThoughts",
+      "header": "JugglingPattern",
+      "target_file": "/home/twain/noteVault/Juggling/Patterns.md"
+    },
+    {
+      "header": "JugVid",
+      "target_file": "/home/twain/noteVault/Z Dev/Current Projects/JugVid2.md"
+    },
+    {
+      "header": "lucid",
+      "target_file": "/home/twain/noteVault/Dreaming/Lucid Dream Train.md"
+    },
+    {
+      "header": "MaybeTodo",
+      "target_file": "/home/twain/noteVault/MaybeTodo.md"
+    },
+    {
+      "header": "Memdeck",
+      "target_file": "/home/twain/noteVault/Z Dev/MyApps/memdeck.md"
+    },
+    {
+      "header": "movieidea",
       "target_file": "/home/twain/noteVault/story/Movies/MovieThoughts.md"
     },
     {
@@ -21,60 +57,76 @@
       "target_file": "/home/twain/noteVault/story/Movies/MovieThoughts.md"
     },
     {
-      "header": "Story",
-      "target_file": "/home/twain/noteVault/story/Story Ideas.md"
+      "header": "MovieResources",
+      "target_file": "/home/twain/noteVault/story/Movies/MovieResources.md"
+    },
+    {
+      "header": "MovieThoughts",
+      "target_file": "/home/twain/noteVault/story/Movies/MovieThoughts.md"
+    },
+    {
+      "header": "music",
+      "target_file": "/home/twain/noteVault/music.md"
+    },
+    {
+      "header": "mydata",
+      "target_file": "/home/twain/noteVault/My Data.md"
+    },
+    {
+      "header": "pipBall",
+      "target_file": "/home/twain/noteVault/Z Dev/Current Projects/pipBall.md"
     },
     {
       "header": "PotentialHabit",
       "target_file": "/home/twain/noteVault/Potential Habits.md"
     },
     {
-      "header": "Asia25",
-      "target_file": "/home/twain/noteVault/Asia25.md"
-    },
-    {
-      "header": "AppIdea",
-      "target_file": "/home/twain/noteVault/Z Dev/Apps.md"
-    },
-    {
       "header": "RentGpu",
       "target_file": "/home/twain/noteVault/RentedGPUideas.md"
-    },
-    {
-      "header": "AiTutor",
-      "target_file": "/home/twain/noteVault/AiTutor.md"
-    },
-    {
-      "header": "Self",
-      "target_file": "/home/twain/noteVault/SelfAdvice.md"
     },
     {
       "header": "Scarf",
       "target_file": "/home/twain/noteVault/Scarf.md"
     },
     {
-      "header": "Habits",
-      "target_file": "/home/twain/noteVault/Habits Thoughts AND Anki Thought.md"
+      "header": "Self",
+      "target_file": "/home/twain/noteVault/SelfAdvice.md"
     },
     {
-      "header": "ToResearch",
-      "target_file": "/home/twain/noteVault/ToResearch.md"
+      "header": "sequence_maker",
+      "target_file": "/home/twain/noteVault/Z Dev/Current Projects/SequenceMaker.md"
     },
     {
-      "header": "AiArt",
-      "target_file": "/home/twain/noteVault/AI/AI Art/Prompts/Not Yet Used.md"
+      "header": "Story",
+      "target_file": "/home/twain/noteVault/story/Story Ideas.md"
     },
     {
-      "header": "MovieResources",
-      "target_file": "/home/twain/noteVault/story/Movies/MovieResources.md"
+      "header": "StreetPerforming",
+      "target_file": "/home/twain/noteVault/Z Misc Life observations/StreetPerforming.md"
+    },
+    {
+      "header": "toBuy",
+      "target_file": "/home/twain/noteVault/ToBuy.md"
     },
     {
       "header": "ToDo",
       "target_file": "/home/twain/noteVault/ToDo.md"
     },
     {
-      "header": "MaybeTodo",
-      "target_file": "/home/twain/noteVault/MaybeTodo.md"
+      "header": "ToRead",
+      "target_file": "/home/twain/noteVault/ToRemember/ToRead.md"
+    },
+    {
+      "header": "toRemember",
+      "target_file": "/home/twain/noteVault/ToRemember/ToRemember.md"
+    },
+    {
+      "header": "ToResearch",
+      "target_file": "/home/twain/noteVault/ToResearch.md"
+    },
+    {
+      "header": "toWatch",
+      "target_file": "/home/twain/noteVault/ToRemember/ToWatch/ToWatch.md"
     }
   ],
   "last_notes_file": "/home/twain/noteVault/Inbox.md"
