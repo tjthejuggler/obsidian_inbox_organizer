@@ -1,0 +1,73 @@
+{
+  "mappings": [
+    {
+      "header": "ToRead",
+      "target_file": "/home/twain/noteVault/ToRemember/ToRead.md"
+    },
+    {
+      "header": "JugglingPattern",
+      "target_file": "/home/twain/noteVault/Juggling/Patterns.md"
+    },
+    {
+      "header": "JugglingMusic",
+      "target_file": "/home/twain/noteVault/JugglingMusic.md"
+    },
+    {
+      "header": "MovieThoughts",
+      "target_file": "/home/twain/noteVault/story/Movies/MovieThoughts.md"
+    },
+    {
+      "header": "MovieObservations",
+      "target_file": "/home/twain/noteVault/story/Movies/MovieThoughts.md"
+    },
+    {
+      "header": "Story",
+      "target_file": "/home/twain/noteVault/story/Story Ideas.md"
+    },
+    {
+      "header": "PotentialHabit",
+      "target_file": "/home/twain/noteVault/Potential Habits.md"
+    },
+    {
+      "header": "Asia25",
+      "target_file": "/home/twain/noteVault/Asia25.md"
+    },
+    {
+      "header": "AppIdea",
+      "target_file": "/home/twain/noteVault/Z Dev/Apps.md"
+    },
+    {
+      "header": "RentGpu",
+      "target_file": "/home/twain/noteVault/RentedGPUideas.md"
+    },
+    {
+      "header": "AiTutor",
+      "target_file": "/home/twain/noteVault/AiTutor.md"
+    },
+    {
+      "header": "Self",
+      "target_file": "/home/twain/noteVault/SelfAdvice.md"
+    },
+    {
+      "header": "Scarf",
+      "target_file": "/home/twain/noteVault/Scarf.md"
+    },
+    {
+      "header": "Habits",
+      "target_file": "/home/twain/noteVault/Habits Thoughts AND Anki Thought.md"
+    },
+    {
+      "header": "ToResearch",
+      "target_file": "/home/twain/noteVault/ToResearch.md"
+    },
+    {
+      "header": "AiArt",
+      "target_file": "/home/twain/noteVault/AI/AI Art/Prompts/Not Yet Used.md"
+    },
+    {
+      "header": "MovieResources",
+      "target_file": "/home/twain/noteVault/story/Movies/MovieResources.md"
+    }
+  ],
+  "last_notes_file": "/home/twain/noteVault/Inbox.md"
+}
