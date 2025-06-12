@@ -265,7 +265,7 @@ class NoteOrganizerApp:
         notes_moved_count = 0
 
         date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
-        configured_headers_map = {m['header']: m['target_file'] for m in self.mappings}
+        configured_headers_map = {m['header'].lower(): m['target_file'] for m in self.mappings}
 
         idx = 0
         while idx < len(all_lines_from_file):
@@ -289,8 +289,8 @@ class NoteOrganizerApp:
                 actual_header_str = current_line_text
                 num_header_lines_for_current_segment = 1
 
-            if actual_header_str in configured_headers_map:
-                target_file = configured_headers_map[actual_header_str]
+            if actual_header_str.lower() in configured_headers_map:
+                target_file = configured_headers_map[actual_header_str.lower()]
                 current_note_lines_accumulator = []
 
                 # Add header lines to accumulator

@@ -67,6 +67,14 @@
     {
       "header": "MovieResources",
       "target_file": "/home/twain/noteVault/story/Movies/MovieResources.md"
+    },
+    {
+      "header": "ToDo",
+      "target_file": "/home/twain/noteVault/ToDo.md"
+    },
+    {
+      "header": "MaybeTodo",
+      "target_file": "/home/twain/noteVault/MaybeTodo.md"
     }
   ],
   "last_notes_file": "/home/twain/noteVault/Inbox.md"
