@@ -10,9 +10,10 @@ This Python application helps organize notes from a main Markdown (`.md`) file i
         -   **Settings**: Opens a window to manage header-to-file mappings and the main notes file.
         -   **Quit**: Exits the application.
 -   Define header-to-file mappings: Specify which notes (identified by their headers) should be moved to which target files (managed via the Settings window).
+-   **Header Grouping**: Multiple headers that point to the same target file are automatically grouped together and displayed on a single line, separated by commas.
 -   Automatic Note Processing: Scans a main notes file, identifies notes by their headers, removes their original headers, prepends a new timestamp (`YYYY-MM-DD HH:MM:SS (auto)`), and moves them to their designated files.
 -   Logging: Keeps a detailed log of all note movements, including timestamp, the *original* header, and a snippet of the note content.
--   GUI for Settings: A simple graphical user interface (accessed from the tray icon) to manage mappings.
+-   GUI for Settings: A simple graphical user interface (accessed from the tray icon) to manage mappings. The settings window has been widened to display full file paths clearly.
 
 ## How Notes are Identified
 
@@ -80,7 +81,8 @@ Example `organizer.log` entry:
     -   **Left-click** the tray icon to perform note organization using the currently saved settings.
     -   **Right-click** the tray icon and select "Settings" to:
         -   Specify the path to your main notes `.md` file.
-        -   Add or manage header-file mappings.
+        -   Add or manage header-file mappings. You can enter multiple headers separated by commas to map them all to the same target file.
+        -   View grouped mappings where multiple headers pointing to the same file are displayed together.
         -   Close the settings window to save changes.
     -   **Right-click** and select "Quit" to close the application.
 
@@ -91,4 +93,4 @@ This application MODIFIES your main notes file by moving notes out of it. It is 
 2.  Test the application with a copy of your notes file first to ensure it behaves as expected.
 
 ---
-*README.md last updated: 2025-06-12 15:48:00 (Self-generated timestamp)*
+*README.md last updated: 2025-06-13 21:59:47 (Self-generated timestamp)*

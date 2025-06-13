@@ -127,6 +127,14 @@
     {
       "header": "toWatch",
       "target_file": "/home/twain/noteVault/ToRemember/ToWatch/ToWatch.md"
+    },
+    {
+      "header": "movie",
+      "target_file": "/home/twain/noteVault/story/Movies/MovieThoughts.md"
+    },
+    {
+      "header": "script",
+      "target_file": "/home/twain/noteVault/Z Dev/Scripts.md"
     }
   ],
   "last_notes_file": "/home/twain/noteVault/Inbox.md"

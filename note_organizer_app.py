@@ -24,7 +24,7 @@ class SettingsDialog(QDialog):
 
         # Set dialog size based on screen height
         screen_geometry = QApplication.primaryScreen().availableGeometry()
-        self.setFixedWidth(800) # Keep a fixed width or make it a percentage of screen width
+        self.setFixedWidth(1200) # Increased width to show full paths
         self.setFixedHeight(screen_geometry.height() - 100) # Use most of the screen height, leaving some margin
 
         self.init_ui()
@@ -51,10 +51,10 @@ class SettingsDialog(QDialog):
 
         # Input fields for new/editing mappings
         input_layout = QGridLayout()
-        input_layout.addWidget(QLabel("Header:"), 0, 0)
+        input_layout.addWidget(QLabel("Headers (comma-separated):"), 0, 0)
         self.header_entry = QLineEdit()
         input_layout.addWidget(self.header_entry, 0, 1)
-        
+
         self.add_mapping_button = QPushButton("Add/Update Mapping")
         self.add_mapping_button.clicked.connect(self.add_or_update_mapping)
         input_layout.addWidget(self.add_mapping_button, 0, 2, 2, 1, Qt.AlignVCenter) # Span 2 rows
@@ -129,40 +129,75 @@ class SettingsDialog(QDialog):
 
     def populate_mappings_list(self):
         self.mappings_table.setRowCount(0) # Clear table
-        for i, mapping in enumerate(self.app_logic.mappings):
+        
+        # Group mappings by target file
+        grouped_mappings = {}
+        for mapping in self.app_logic.mappings:
+            target_file = mapping["target_file"]
+            headers = mapping["header"]
+            if isinstance(headers, str):
+                headers = [headers]
+            
+            if target_file not in grouped_mappings:
+                grouped_mappings[target_file] = []
+            grouped_mappings[target_file].extend(headers)
+        
+        # Populate table with grouped mappings
+        for i, (target_file, headers_list) in enumerate(grouped_mappings.items()):
             self.mappings_table.insertRow(i)
-            self.mappings_table.setItem(i, 0, QTableWidgetItem(mapping["header"]))
-            self.mappings_table.setItem(i, 1, QTableWidgetItem(mapping["target_file"]))
+            headers_str = ", ".join(headers_list)
+            self.mappings_table.setItem(i, 0, QTableWidgetItem(headers_str))
+            self.mappings_table.setItem(i, 1, QTableWidgetItem(target_file))
+        
         self.mappings_table.clearSelection()
         self.remove_mapping_button.setEnabled(False)
 
 
     def add_or_update_mapping(self):
-        header = self.header_entry.text().strip()
+        headers_text = self.header_entry.text().strip()
         target_file = self.target_file_entry.text().strip()
 
-        if not header:
-            QMessageBox.warning(self, "Input Error", "Header cannot be empty.")
+        if not headers_text:
+            QMessageBox.warning(self, "Input Error", "Header(s) cannot be empty.")
             return
         if not target_file:
             QMessageBox.warning(self, "Input Error", "Target file path cannot be empty.")
             return
 
-        found_idx = -1
-        for i, m in enumerate(self.app_logic.mappings):
-            if m["header"] == header:
-                found_idx = i
-                break
+        headers = [h.strip() for h in headers_text.split(",")]
+
+        # Remove any existing mappings for these headers or this target file
+        existing_headers = []
+        existing_target_files = []
         
-        if found_idx != -1:
-            reply = QMessageBox.question(self, "Confirm Update",
-                                         f"Header '{header}' already exists. Update target file to '{target_file}'?",
+        for m in self.app_logic.mappings:
+            m_headers = m["header"] if isinstance(m["header"], list) else [m["header"]]
+            for header in headers:
+                if header in m_headers:
+                    existing_headers.append(header)
+            if m["target_file"] == target_file:
+                existing_target_files.extend(m_headers)
+
+        if existing_headers or existing_target_files:
+            msg = "This will update existing mappings:\n"
+            if existing_headers:
+                msg += f"- Headers already exist: {', '.join(existing_headers)}\n"
+            if existing_target_files:
+                msg += f"- Target file already has headers: {', '.join(existing_target_files)}\n"
+            msg += f"\nProceed with setting headers '{', '.join(headers)}' to target '{target_file}'?"
+            
+            reply = QMessageBox.question(self, "Confirm Update", msg,
                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            if reply == QMessageBox.Yes:
-                self.app_logic.mappings[found_idx]["target_file"] = target_file
-            else:
-                return # User cancelled
-        else:
+            if reply != QMessageBox.Yes:
+                return  # User cancelled
+
+        # Remove all existing mappings for these headers and this target file
+        self.app_logic.mappings = [m for m in self.app_logic.mappings
+                                   if not (any(h in (m["header"] if isinstance(m["header"], list) else [m["header"]]) for h in headers)
+                                          or m["target_file"] == target_file)]
+
+        # Add individual mappings for each header (to maintain compatibility with existing config format)
+        for header in headers:
             self.app_logic.mappings.append({"header": header, "target_file": target_file})
 
         # self.app_logic.save_config() # Save will happen on dialog close
@@ -178,7 +213,7 @@ class SettingsDialog(QDialog):
             row_index = selected_rows[0].row()
             header = self.mappings_table.item(row_index, 0).text()
             target_file = self.mappings_table.item(row_index, 1).text()
-            self.header_entry.setText(header)
+            self.header_entry.setText(header) # The header is already comma separated
             self.target_file_entry.setText(target_file)
             self.remove_mapping_button.setEnabled(True)
         else:
@@ -193,19 +228,21 @@ class SettingsDialog(QDialog):
             return
 
         row_index = selected_rows[0].row()
-        header_to_remove = self.mappings_table.item(row_index, 0).text()
+        target_file_to_remove = self.mappings_table.item(row_index, 1).text()
+        headers_to_remove = self.mappings_table.item(row_index, 0).text()
 
         reply = QMessageBox.question(self, "Confirm Removal",
-                                     f"Are you sure you want to remove the mapping for header '{header_to_remove}'?",
+                                     f"Are you sure you want to remove all mappings for target file '{target_file_to_remove}'?\nThis will remove headers: {headers_to_remove}",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
-            self.app_logic.mappings = [m for m in self.app_logic.mappings if m["header"] != header_to_remove]
+            # Remove all mappings that point to this target file
+            self.app_logic.mappings = [m for m in self.app_logic.mappings if m["target_file"] != target_file_to_remove]
             # self.app_logic.save_config() # Save on dialog close
             self.populate_mappings_list()
             self.header_entry.clear()
             self.target_file_entry.clear()
             self.remove_mapping_button.setEnabled(False)
-            QMessageBox.showinfo(self, "Success", "Mapping removed.")
+            QMessageBox.information(self, "Success", "Mappings removed.")
 
     def accept(self): # Called when "Close" is clicked or dialog is closed
         self.app_logic.last_notes_file = self.notes_file_entry.text()
@@ -383,7 +420,11 @@ class NoteOrganizerAppLogic:
         notes_moved_count = 0
 
         date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
-        configured_headers_map = {m['header'].lower(): m['target_file'] for m in self.mappings}
+        configured_headers_map = {}
+        for m in self.mappings:
+            header = m['header']
+            # Since we're storing individual mappings, header should be a string
+            configured_headers_map[header.lower()] = m['target_file']
 
         idx = 0
         while idx < len(all_lines_from_file):

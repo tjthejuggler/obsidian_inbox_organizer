@@ -252,3 +252,21 @@
 2025-06-12 17:45:23 | HEADER: APP_START | NOTE_SNIPPET: Application started in tray mo... | MOVED_FROM: System | MOVED_TO: System
 2025-06-12 17:45:25 | HEADER: APP_QUIT | NOTE_SNIPPET: Application quitting. Attempti... | MOVED_FROM: System | MOVED_TO: System
 2025-06-12 17:45:28 | HEADER: APP_START | NOTE_SNIPPET: Application started in tray mo... | MOVED_FROM: System | MOVED_TO: System
+2025-06-12 19:42:07 | HEADER: TRAY_CLICK | NOTE_SNIPPET: Organize triggered from tray... | MOVED_FROM: A | MOVED_TO: N/A
+2025-06-12 19:42:07 | HEADER: music | NOTE_SNIPPET: https://open.spotify.com/album... | MOVED_FROM: Inbox.md | MOVED_TO: /home/twain/noteVault/music.md
+2025-06-12 19:42:07 | HEADER: towatch | NOTE_SNIPPET: earthsounds ... | MOVED_FROM: Inbox.md | MOVED_TO: /home/twain/noteVault/ToRemember/ToWatch/ToWatch.md
+2025-06-12 19:42:34 | HEADER: TRAY_CLICK | NOTE_SNIPPET: Organize triggered from tray... | MOVED_FROM: A | MOVED_TO: N/A
+2025-06-12 19:42:34 | HEADER: Asia25 | NOTE_SNIPPET: Mariokart in tokyo ... | MOVED_FROM: Inbox.md | MOVED_TO: /home/twain/noteVault/Asia25.md
+2025-06-13 21:30:33 | HEADER: TRAY_CLICK | NOTE_SNIPPET: Organize triggered from tray... | MOVED_FROM: A | MOVED_TO: N/A
+2025-06-13 21:30:33 | HEADER: Movie | NOTE_SNIPPET: Very different situations, lik... | MOVED_FROM: Inbox.md | MOVED_TO: /home/twain/noteVault/story/Movies/MovieThoughts.md
+2025-06-13 21:30:33 | HEADER: Self | NOTE_SNIPPET: When sleep deprived, do HIT fo... | MOVED_FROM: Inbox.md | MOVED_TO: /home/twain/noteVault/SelfAdvice.md
+2025-06-13 21:30:33 | HEADER: script | NOTE_SNIPPET: Get a good setup to easily use... | MOVED_FROM: Inbox.md | MOVED_TO: /home/twain/noteVault/Z Dev/Scripts.md
+2025-06-13 21:48:34 | HEADER: APP_START | NOTE_SNIPPET: Application started in tray mo... | MOVED_FROM: System | MOVED_TO: System
+2025-06-13 21:48:41 | HEADER: APP_QUIT | NOTE_SNIPPET: Application quitting. Attempti... | MOVED_FROM: System | MOVED_TO: System
+2025-06-13 21:48:45 | HEADER: TRAY_CLICK | NOTE_SNIPPET: Organize triggered from tray... | MOVED_FROM: A | MOVED_TO: N/A
+2025-06-13 21:48:55 | HEADER: APP_QUIT | NOTE_SNIPPET: Application quitting. Attempti... | MOVED_FROM: System | MOVED_TO: System
+2025-06-13 21:48:58 | HEADER: APP_START | NOTE_SNIPPET: Application started in tray mo... | MOVED_FROM: System | MOVED_TO: System
+2025-06-13 21:49:00 | HEADER: TRAY_CLICK | NOTE_SNIPPET: Organize triggered from tray... | MOVED_FROM: A | MOVED_TO: N/A
+2025-06-13 21:50:29 | HEADER: APP_QUIT | NOTE_SNIPPET: Application quitting. Attempti... | MOVED_FROM: System | MOVED_TO: System
+2025-06-13 21:52:11 | HEADER: APP_START | NOTE_SNIPPET: Application started in tray mo... | MOVED_FROM: System | MOVED_TO: System
+2025-06-13 21:59:57 | HEADER: APP_START | NOTE_SNIPPET: Application started in tray mo... | MOVED_FROM: System | MOVED_TO: System
