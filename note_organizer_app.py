@@ -51,7 +51,7 @@ class SettingsDialog(QDialog):
 
         # Input fields for new/editing mappings
         input_layout = QGridLayout()
-        input_layout.addWidget(QLabel("Headers (comma-separated):"), 0, 0)
+        input_layout.addWidget(QLabel("Header:"), 0, 0)
         self.header_entry = QLineEdit()
         input_layout.addWidget(self.header_entry, 0, 1)
 
@@ -78,22 +78,39 @@ class SettingsDialog(QDialog):
         self.mappings_table = QTableWidget()
         self.mappings_table.setColumnCount(2)
         self.mappings_table.setHorizontalHeaderLabels(["Header", "Target File"])
-        self.mappings_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.mappings_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        # Make columns resizable by user
+        self.mappings_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Interactive)
+        self.mappings_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Interactive)
+        # Set initial column widths
+        self.mappings_table.setColumnWidth(0, 200)
+        self.mappings_table.setColumnWidth(1, 800)
         self.mappings_table.setSelectionBehavior(QTableWidget.SelectRows)
         self.mappings_table.setSelectionMode(QTableWidget.SingleSelection)
         self.mappings_table.itemSelectionChanged.connect(self.on_mapping_select)
         self.mappings_table.verticalHeader().setDefaultSectionSize(25) # Adjust row height for compactness
-        # Optionally, set a smaller font for table items if needed:
-        # font = self.mappings_table.font()
-        # font.setPointSize(9) # Example: set font size to 9
-        # self.mappings_table.setFont(font)
         mappings_layout.addWidget(self.mappings_table)
 
+        # Buttons for table operations
+        table_buttons_layout = QHBoxLayout()
+        
+        self.move_up_button = QPushButton("Move Up")
+        self.move_up_button.setEnabled(False)
+        self.move_up_button.clicked.connect(self.move_mapping_up)
+        table_buttons_layout.addWidget(self.move_up_button)
+        
+        self.move_down_button = QPushButton("Move Down")
+        self.move_down_button.setEnabled(False)
+        self.move_down_button.clicked.connect(self.move_mapping_down)
+        table_buttons_layout.addWidget(self.move_down_button)
+        
+        table_buttons_layout.addStretch()
+        
         self.remove_mapping_button = QPushButton("Remove Selected Mapping")
         self.remove_mapping_button.setEnabled(False)
         self.remove_mapping_button.clicked.connect(self.remove_mapping)
-        mappings_layout.addWidget(self.remove_mapping_button)
+        table_buttons_layout.addWidget(self.remove_mapping_button)
+        
+        mappings_layout.addLayout(table_buttons_layout)
         
         mappings_group.setLayout(mappings_layout)
         main_layout.addWidget(mappings_group)
@@ -129,75 +146,40 @@ class SettingsDialog(QDialog):
 
     def populate_mappings_list(self):
         self.mappings_table.setRowCount(0) # Clear table
-        
-        # Group mappings by target file
-        grouped_mappings = {}
-        for mapping in self.app_logic.mappings:
-            target_file = mapping["target_file"]
-            headers = mapping["header"]
-            if isinstance(headers, str):
-                headers = [headers]
-            
-            if target_file not in grouped_mappings:
-                grouped_mappings[target_file] = []
-            grouped_mappings[target_file].extend(headers)
-        
-        # Populate table with grouped mappings
-        for i, (target_file, headers_list) in enumerate(grouped_mappings.items()):
+        for i, mapping in enumerate(self.app_logic.mappings):
             self.mappings_table.insertRow(i)
-            headers_str = ", ".join(headers_list)
-            self.mappings_table.setItem(i, 0, QTableWidgetItem(headers_str))
-            self.mappings_table.setItem(i, 1, QTableWidgetItem(target_file))
-        
+            self.mappings_table.setItem(i, 0, QTableWidgetItem(mapping["header"]))
+            self.mappings_table.setItem(i, 1, QTableWidgetItem(mapping["target_file"]))
         self.mappings_table.clearSelection()
         self.remove_mapping_button.setEnabled(False)
 
 
     def add_or_update_mapping(self):
-        headers_text = self.header_entry.text().strip()
+        header = self.header_entry.text().strip()
         target_file = self.target_file_entry.text().strip()
 
-        if not headers_text:
-            QMessageBox.warning(self, "Input Error", "Header(s) cannot be empty.")
+        if not header:
+            QMessageBox.warning(self, "Input Error", "Header cannot be empty.")
             return
         if not target_file:
             QMessageBox.warning(self, "Input Error", "Target file path cannot be empty.")
             return
 
-        headers = [h.strip() for h in headers_text.split(",")]
-
-        # Remove any existing mappings for these headers or this target file
-        existing_headers = []
-        existing_target_files = []
+        found_idx = -1
+        for i, m in enumerate(self.app_logic.mappings):
+            if m["header"] == header:
+                found_idx = i
+                break
         
-        for m in self.app_logic.mappings:
-            m_headers = m["header"] if isinstance(m["header"], list) else [m["header"]]
-            for header in headers:
-                if header in m_headers:
-                    existing_headers.append(header)
-            if m["target_file"] == target_file:
-                existing_target_files.extend(m_headers)
-
-        if existing_headers or existing_target_files:
-            msg = "This will update existing mappings:\n"
-            if existing_headers:
-                msg += f"- Headers already exist: {', '.join(existing_headers)}\n"
-            if existing_target_files:
-                msg += f"- Target file already has headers: {', '.join(existing_target_files)}\n"
-            msg += f"\nProceed with setting headers '{', '.join(headers)}' to target '{target_file}'?"
-            
-            reply = QMessageBox.question(self, "Confirm Update", msg,
+        if found_idx != -1:
+            reply = QMessageBox.question(self, "Confirm Update",
+                                         f"Header '{header}' already exists. Update target file to '{target_file}'?",
                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            if reply != QMessageBox.Yes:
-                return  # User cancelled
-
-        # Remove all existing mappings for these headers and this target file
-        self.app_logic.mappings = [m for m in self.app_logic.mappings
-                                   if not (any(h in (m["header"] if isinstance(m["header"], list) else [m["header"]]) for h in headers)
-                                          or m["target_file"] == target_file)]
-
-        # Add individual mappings for each header (to maintain compatibility with existing config format)
-        for header in headers:
+            if reply == QMessageBox.Yes:
+                self.app_logic.mappings[found_idx]["target_file"] = target_file
+            else:
+                return # User cancelled
+        else:
             self.app_logic.mappings.append({"header": header, "target_file": target_file})
 
         # self.app_logic.save_config() # Save will happen on dialog close
@@ -213,13 +195,58 @@ class SettingsDialog(QDialog):
             row_index = selected_rows[0].row()
             header = self.mappings_table.item(row_index, 0).text()
             target_file = self.mappings_table.item(row_index, 1).text()
-            self.header_entry.setText(header) # The header is already comma separated
+            self.header_entry.setText(header)
             self.target_file_entry.setText(target_file)
             self.remove_mapping_button.setEnabled(True)
+            
+            # Enable/disable move buttons based on position
+            total_rows = self.mappings_table.rowCount()
+            self.move_up_button.setEnabled(row_index > 0)
+            self.move_down_button.setEnabled(row_index < total_rows - 1)
         else:
             self.header_entry.clear()
             self.target_file_entry.clear()
             self.remove_mapping_button.setEnabled(False)
+            self.move_up_button.setEnabled(False)
+            self.move_down_button.setEnabled(False)
+
+    def move_mapping_up(self):
+        selected_rows = self.mappings_table.selectionModel().selectedRows()
+        if not selected_rows:
+            return
+        
+        row_index = selected_rows[0].row()
+        if row_index <= 0:
+            return
+        
+        # Swap the mappings in the data
+        self.app_logic.mappings[row_index], self.app_logic.mappings[row_index - 1] = \
+            self.app_logic.mappings[row_index - 1], self.app_logic.mappings[row_index]
+        
+        # Refresh the table
+        self.populate_mappings_list()
+        
+        # Select the moved row
+        self.mappings_table.selectRow(row_index - 1)
+
+    def move_mapping_down(self):
+        selected_rows = self.mappings_table.selectionModel().selectedRows()
+        if not selected_rows:
+            return
+        
+        row_index = selected_rows[0].row()
+        if row_index >= len(self.app_logic.mappings) - 1:
+            return
+        
+        # Swap the mappings in the data
+        self.app_logic.mappings[row_index], self.app_logic.mappings[row_index + 1] = \
+            self.app_logic.mappings[row_index + 1], self.app_logic.mappings[row_index]
+        
+        # Refresh the table
+        self.populate_mappings_list()
+        
+        # Select the moved row
+        self.mappings_table.selectRow(row_index + 1)
 
     def remove_mapping(self):
         selected_rows = self.mappings_table.selectionModel().selectedRows()
@@ -228,21 +255,19 @@ class SettingsDialog(QDialog):
             return
 
         row_index = selected_rows[0].row()
-        target_file_to_remove = self.mappings_table.item(row_index, 1).text()
-        headers_to_remove = self.mappings_table.item(row_index, 0).text()
+        header_to_remove = self.mappings_table.item(row_index, 0).text()
 
         reply = QMessageBox.question(self, "Confirm Removal",
-                                     f"Are you sure you want to remove all mappings for target file '{target_file_to_remove}'?\nThis will remove headers: {headers_to_remove}",
+                                     f"Are you sure you want to remove the mapping for header '{header_to_remove}'?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
-            # Remove all mappings that point to this target file
-            self.app_logic.mappings = [m for m in self.app_logic.mappings if m["target_file"] != target_file_to_remove]
+            self.app_logic.mappings = [m for m in self.app_logic.mappings if m["header"] != header_to_remove]
             # self.app_logic.save_config() # Save on dialog close
             self.populate_mappings_list()
             self.header_entry.clear()
             self.target_file_entry.clear()
             self.remove_mapping_button.setEnabled(False)
-            QMessageBox.information(self, "Success", "Mappings removed.")
+            QMessageBox.information(self, "Success", "Mapping removed.")
 
     def accept(self): # Called when "Close" is clicked or dialog is closed
         self.app_logic.last_notes_file = self.notes_file_entry.text()
